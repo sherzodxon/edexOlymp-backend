@@ -1,0 +1,179 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum ExamStatus {
+  TYPING     // 1-qism — typing
+  TEST       // 2-qism — test
+  DOCS       // 3-qism — Word fayl
+  PPTX       // 4-qism — PowerPoint fayl
+  COMPLETED  // Hammasi tayyor
+}
+
+// ─────────────────────────────────────────────
+// STUDENT — ro'yxatdan o'tgan talaba
+// ─────────────────────────────────────────────
+model Student {
+  id          Int      @id @default(autoincrement())
+  token       String   @unique @db.VarChar(64)
+  firstName   String   @db.VarChar(100)
+  lastName    String   @db.VarChar(100)
+  school      String   @db.VarChar(200)
+  grade       Int      // 5–11
+
+  // Ball summasi (yangi tartib: 25 + 20 + 20 + 25 = 90)
+  typingScore Float    @default(0)  // max 25 (WPM * 0.5, 50+ WPM = 25)
+  testScore   Float    @default(0)  // max 20 (har savol 1 ball)
+  docsScore   Float    @default(0)  // max 20
+  pptxScore   Float    @default(0)  // max 25
+  totalScore  Float    @default(0)  // typing + test + docs + pptx
+
+  status      ExamStatus @default(TYPING)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  typingAttempts TypingAttempt[]
+  testSession    TestSession?
+  docsSubmission DocsSubmission?
+  pptxSubmission PptxSubmission?
+
+  @@index([grade])
+  @@index([totalScore])
+}
+
+// ─────────────────────────────────────────────
+// TYPING — 3 ta urinish, eng yaxshisi saqlanadi
+// ─────────────────────────────────────────────
+model TypingAttempt {
+  id            Int      @id @default(autoincrement())
+  studentId     Int
+  attemptNumber Int      // 1, 2, 3
+  wpm           Int
+  rawWpm        Int
+  accuracy      Float
+  correctWords  Int
+  totalWords    Int
+  score         Float    // wpm * 0.5 (max 25)
+  createdAt     DateTime @default(now())
+
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@unique([studentId, attemptNumber])
+  @@index([studentId])
+}
+
+// ─────────────────────────────────────────────
+// EXAM CONFIG — admin paneldan boshqariladi
+// ─────────────────────────────────────────────
+model ExamConfig {
+  id                 Int      @id @default(autoincrement())
+  typingTimeLimitSec Int      @default(300)  // 5 daqiqa
+  testTimeLimitSec   Int      @default(600)  // 10 daqiqa
+  docsTimeLimitSec   Int      @default(1500) // 25 daqiqa
+  pptxTimeLimitSec   Int      @default(1200) // 20 daqiqa
+  docsCriteria       String   @db.Text       // JSON: Word mezonlari (group_5_6 / 7_8 / 9)
+  pptxCriteria       String   @db.Text       // JSON: PPTX mezonlari (group_5_6 / 7_8 / 9)
+  isActive           Boolean  @default(true)
+  updatedAt          DateTime @updatedAt
+}
+
+// ─────────────────────────────────────────────
+// TEST QUESTION — admin yaratgan savollar
+// ─────────────────────────────────────────────
+model TestQuestion {
+  id           Int      @id @default(autoincrement())
+  grade        Int      // Qaysi sinf uchun (5, 6, 7...11 yoki 0 = hammasi)
+  questionText String   @db.Text
+  imageUrl     String?  @db.VarChar(500) // ixtiyoriy rasm (null bo'lishi mumkin)
+  optionA      String   @db.VarChar(500)
+  optionB      String   @db.VarChar(500)
+  optionC      String   @db.VarChar(500)
+  optionD      String   @db.VarChar(500)
+  correctOption String  @db.VarChar(1) // 'A', 'B', 'C', 'D'
+  orderIndex   Int      @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  answers TestAnswer[]
+
+  @@index([grade, isActive])
+}
+
+// ─────────────────────────────────────────────
+// TEST SESSION — talabaning test bosqichi
+// ─────────────────────────────────────────────
+model TestSession {
+  id            Int       @id @default(autoincrement())
+  studentId     Int       @unique
+  startedAt     DateTime  @default(now())
+  finishedAt    DateTime?
+  score         Float     @default(0) // to'g'ri javoblar soni (max 20)
+  isCompleted   Boolean   @default(false)
+  questionOrder String?   @db.Text   // JSON: [questionId, ...] — har talaba uchun random tartib
+
+  student  Student      @relation(fields: [studentId], references: [id])
+  answers  TestAnswer[]
+}
+
+// ─────────────────────────────────────────────
+// TEST ANSWER — talabaning javoblari
+// ─────────────────────────────────────────────
+model TestAnswer {
+  id             Int    @id @default(autoincrement())
+  testSessionId  Int
+  questionId     Int
+  selectedOption String @db.VarChar(1) // 'A', 'B', 'C', 'D'
+  isCorrect      Boolean
+
+  session  TestSession  @relation(fields: [testSessionId], references: [id])
+  question TestQuestion @relation(fields: [questionId], references: [id])
+
+  @@unique([testSessionId, questionId])
+}
+
+// ─────────────────────────────────────────────
+// DOCS SUBMISSION — Word fayl yuklash
+// ─────────────────────────────────────────────
+model DocsSubmission {
+  id            Int       @id @default(autoincrement())
+  studentId     Int       @unique
+  fileName      String    @db.VarChar(255)
+  filePath      String    @db.VarChar(500)
+  fileSize      Int
+  submittedAt   DateTime  @default(now())
+  score         Float     @default(0)   // 0–20 ball
+  feedback      String?   @db.Text      // mezon tekshiruvi natijasi
+  isChecked     Boolean   @default(false)
+  checkedAt     DateTime?
+
+  student Student @relation(fields: [studentId], references: [id])
+}
+
+// ─────────────────────────────────────────────
+// PPTX SUBMISSION — PowerPoint fayl yuklash
+// ─────────────────────────────────────────────
+model PptxSubmission {
+  id            Int       @id @default(autoincrement())
+  studentId     Int       @unique
+  fileName      String    @db.VarChar(255)
+  filePath      String    @db.VarChar(500)
+  fileSize      Int
+  submittedAt   DateTime  @default(now())
+  score         Float     @default(0)   // 0–25 ball
+  feedback      String?   @db.Text      // mezon tekshiruvi natijasi
+  isChecked     Boolean   @default(false)
+  checkedAt     DateTime?
+
+  student Student @relation(fields: [studentId], references: [id])
+}
