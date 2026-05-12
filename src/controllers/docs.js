@@ -8,9 +8,6 @@ const JSZip   = require('jszip');
 const MAX_DOCS_SCORE      = 20;     // Word fayl uchun maksimal ball
 const DEFAULT_DOCS_TIME   = 1500;   // 25 daqiqa
 
-// ──────────────────────────────────────────────
-// Word fayl yuklash
-// ──────────────────────────────────────────────
 const uploadDoc = async (req, res) => {
   const { token } = req.body;
   if (!token)    return res.status(400).json({ error: 'Token majburiy' });
@@ -39,7 +36,7 @@ const uploadDoc = async (req, res) => {
       mammoth.convertToHtml({ path: filePath }),
     ]);
 
-    // JSZip — format (shrift, o'lcham, rang, tekislash)
+    
     const formatStats = await analyzeDocxFormat(filePath);
 
     const rawText = textResult.value.trim();
@@ -74,9 +71,7 @@ const uploadDoc = async (req, res) => {
   }
 };
 
-// ──────────────────────────────────────────────
-// Admin: talabaning faylini yuklab olish
-// ──────────────────────────────────────────────
+
 const downloadStudentDoc = async (req, res) => {
   const { studentId } = req.params;
   try {
@@ -251,16 +246,12 @@ function analyzeDoc(rawText, rawHtml) {
   };
 }
 
-// ──────────────────────────────────────────────
-// Asosiy baholash — matn + format birga
-// Maksimal ball — 20 (admin paneldagi mezonlardan kelib chiqib taqsimlanadi)
-// ──────────────────────────────────────────────
+
 function evaluateDoc(rawText, rawHtml, formatStats, criteria) {
   const stats     = analyzeDoc(rawText, rawHtml);
   const feedback  = [];
   let earned      = 0;
 
-  // Admin mezonlari (baholash_mezonlari formati)
   if (criteria?.baholash_mezonlari?.length) {
     criteria.baholash_mezonlari.forEach(mezon => {
       const maxBall = mezon.maksimal_ball ?? 5;
@@ -424,7 +415,7 @@ function gradeMezon(nom, maxBall, stats, fmt, rawText) {
     };
   }
 
-  // Noma'lum mezon — so'z soni
+  
   const ball = stats.wordCount >= 100 ? maxBall * 0.8
              : stats.wordCount >= 50  ? maxBall * 0.5
              : maxBall * 0.2;
