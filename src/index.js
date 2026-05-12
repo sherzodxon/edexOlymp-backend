@@ -8,7 +8,7 @@ const prisma = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const option = [process.env.FRONTEND_URL,"https://edex-olymp-frontend.vercel.app/"]
+const option = [process.env.FRONTEND_URL,"https://edex-olymp.vercel.app/"]
 app.use(cors({
   origin: option || '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
