@@ -9,9 +9,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ─────────────────────────────────────────────
-// ENUMS
-// ─────────────────────────────────────────────
 
 enum ExamStatus {
   TYPING     // 1-qism — typing
@@ -21,9 +18,6 @@ enum ExamStatus {
   COMPLETED  // Hammasi tayyor
 }
 
-// ─────────────────────────────────────────────
-// STUDENT — ro'yxatdan o'tgan talaba
-// ─────────────────────────────────────────────
 model Student {
   id          Int      @id @default(autoincrement())
   token       String   @unique @db.VarChar(64)

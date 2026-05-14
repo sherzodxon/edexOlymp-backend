@@ -2,9 +2,9 @@
 const prisma = require('../db');
 
 const MAX_ATTEMPTS = 3;
-const MAX_TYPING_SCORE = 25;       // typing uchun maksimal ball
-const SCORE_PER_WPM    = 0.5;      // 1 WPM = 0.5 ball
-// 50 WPM va undan yuqori — 25 ball
+const MAX_TYPING_SCORE = 30;       // typing uchun maksimal ball
+const SCORE_PER_WPM    = 0.6;      // 1 WPM = 0.6 ball
+// 50 WPM va undan yuqori — 30 ball
 
 // WPM dan ball hisoblash (max 25)
 function calcTypingScore(wpm) {

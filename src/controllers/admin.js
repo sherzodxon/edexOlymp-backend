@@ -31,7 +31,14 @@ const getResults = async (req, res) => {
       orderBy: { totalScore: 'desc' },
     });
 
-    res.json({ success: true, data: students });
+    const data = students.map(s => ({
+      ...s,
+      totalScore: parseFloat(
+        ((s.typingScore || 0) + (s.testScore || 0) + (s.docsScore || 0) + (s.pptxScore || 0)).toFixed(2)
+      ),
+    }));
+
+    res.json({ success: true, data });
   } catch (err) {
     console.error('Admin get results error:', err);
     res.status(500).json({ error: 'Server xatosi' });
@@ -62,7 +69,14 @@ const getLeaderboard = async (req, res) => {
       take: 100,
     });
 
-    const ranked = students.map((s, i) => ({ ...s, rank: i + 1 }));
+    const withTotal = students.map(s => ({
+      ...s,
+      totalScore: parseFloat(
+        ((s.typingScore || 0) + (s.testScore || 0) + (s.docsScore || 0) + (s.pptxScore || 0)).toFixed(2)
+      ),
+    }));
+    withTotal.sort((a, b) => b.totalScore - a.totalScore);
+    const ranked = withTotal.map((s, i) => ({ ...s, rank: i + 1 }));
 
     // Eski mijozlar uchun groups formatini ham qaytaramiz
     res.json({

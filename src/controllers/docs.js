@@ -5,7 +5,7 @@ const path    = require('path');
 const fs      = require('fs');
 const JSZip   = require('jszip');
 
-const MAX_DOCS_SCORE      = 20;     // Word fayl uchun maksimal ball
+const MAX_DOCS_SCORE      = 25;     // Word fayl uchun maksimal ball
 const DEFAULT_DOCS_TIME   = 1500;   // 25 daqiqa
 
 const uploadDoc = async (req, res) => {
