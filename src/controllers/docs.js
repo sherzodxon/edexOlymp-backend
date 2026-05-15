@@ -200,6 +200,9 @@ async function analyzeDocxFormat(filePath) {
     const colorMatches = [...docXml.matchAll(/w:color\s+w:val="([^"]+)"/g)];
     const colorSet = new Set(colorMatches.map(m => m[1]).filter(c => c !== 'auto'));
     result.colors = [...colorSet];
+    // "── Rang ──" blokidan keyin:
+const relXml = await zip.file('word/_rels/document.xml.rels')?.async('string') ?? '';
+result.imageCount = (relXml.match(/Type="[^"]*\/image"/g) ?? []).length;
 
     // ── Jadvallar ──
     result.tableCount = (docXml.match(/<w:tbl>/g) ?? []).length;
@@ -305,7 +308,23 @@ function evaluateDoc(rawText, rawHtml, formatStats, criteria) {
 // Har bir mezon turini baholash (matn + format)
 // ──────────────────────────────────────────────
 function gradeMezon(nom, maxBall, stats, fmt, rawText) {
+ // gradeMezon ichiga, birinchi if DAN OLDIN qo'shing:
 
+if (nom.includes("so'z") || nom.includes('word') || nom.includes('hajm')) {
+  const w = stats.wordCount;
+  let ball = w >= 200 ? maxBall        // 7-8-9: 404 so'z → to'liq ball
+           : w >= 150 ? maxBall * 0.8
+           : w >= 100 ? maxBall * 0.5
+           : maxBall * 0.2;
+  return { ball, hint: `${w} ta so'z` };
+}
+
+if (nom.includes('rasm') || nom.includes('image')) {
+  // JSZip da imageCount ni analyzeDocxFormat ga qo'shish kerak (quyida)
+  const count = fmt.imageCount ?? 0;
+  let ball = count >= 1 ? maxBall : 0;
+  return { ball, hint: count === 0 ? 'Rasm topilmadi' : `${count} ta rasm mavjud` };
+}
   if (nom.includes('imlo') || nom.includes('spelling')) {
     const ratio = stats.lexicalRatio;
     const avgLen = stats.charCount / Math.max(stats.wordCount, 1);
@@ -420,6 +439,7 @@ function gradeMezon(nom, maxBall, stats, fmt, rawText) {
              : stats.wordCount >= 50  ? maxBall * 0.5
              : maxBall * 0.2;
   return { ball, hint: `So'zlar: ${stats.wordCount}` };
+
 }
 
 module.exports = { uploadDoc, getDocsStatus, downloadStudentDoc };
